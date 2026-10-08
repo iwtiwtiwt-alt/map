@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高雄市鼓山區 YouBike 2.0 站點地圖</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f8f9fa;
+        }
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        header p {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+        #map {
+            flex: 1;
+            width: 100%;
+            z-index: 1;
+        }
+        /* 自訂 Leaflet Popup 樣式 */
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            padding: 5px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+        .popup-card {
+            min-width: 200px;
+        }
+        .popup-card h3 {
+            color: #007bff;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 4px;
+        }
+        .popup-card p {
+            font-size: 0.9rem;
+            color: #495057;
+            margin: 4px 0;
+        }
+        .popup-card .capacity {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 3px 8px;
+            background-color: #28a745;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>高雄市鼓山區 YouBike 2.0 站點地圖</h1>
+        <p>資料來源：CSV 檔案資料設定（共 14 個站點）</p>
+    </header>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. CSV 精確配對資料 (包含站點名稱、地點、車輛數與經緯度)
+        const ubikeData = [
+            { name: "捷運巨蛋站(2號出口)", location: "博愛二路/裕誠路口(西北角)", capacity: 25, lat: 22.6658, lng: 120.3022 },
+            { name: "捷運凹子底站(4號出口)", location: "博愛二路/至聖路口(西北側人行道)", capacity: 30, lat: 22.6562, lng: 120.3024 },
+            { name: "輕軌美術館站", location: "美術館路/馬卡道路口", capacity: 20, lat: 22.6566, lng: 120.2868 },
+            { name: "輕軌內惟藝術中心站", location: "馬卡道路/美術館路口(東側)", capacity: 18, lat: 22.6539, lng: 120.2866 },
+            { name: "輕軌哈瑪星站", location: "鼓山一路/臨海一路口", capacity: 35, lat: 22.6218, lng: 120.2747 },
+            { name: "濱海臨海路口(西南側)", location: "濱海二路/臨海二路口(西南側人行道)", capacity: 43, lat: 22.6208, lng: 120.2709 },
+            { name: "中山大學西子樓", location: "蓮海路70號(西子樓前)", capacity: 20, lat: 22.6241, lng: 120.2641 },
+            { name: "鼓山輪渡站", location: "濱海二路/臨海一路口", capacity: 25, lat: 22.6195, lng: 120.2703 },
+            { name: "高雄市立美術館", location: "美術館路/美術東二路口", capacity: 25, lat: 22.6575, lng: 120.2925 },
+            { name: "中華翠華路口", location: "中華一路/翠華路口", capacity: 25, lat: 22.6713, lng: 120.2936 },
+            { name: "美術北三馬卡道路口", location: "美術北三路/馬卡道路口", capacity: 18, lat: 22.6622, lng: 120.2872 },
+            { name: "森林公園", location: "神農路/龍勝路口", capacity: 20, lat: 22.6578, lng: 120.2989 },
+            { name: "華榮公園", location: "文信路/華榮路口(華榮公園旁)", capacity: 15, lat: 22.6631, lng: 120.2974 },
+            { name: "美術館藝片天", location: "美術東一路/美術東二路口(中華藝校旁)", capacity: 15, lat: 22.6534, lng: 120.2921 }
+        ];
+
+        // 2. 初始化地圖，中心點設為鼓山區中心（約在凹子底/美術館一帶）
+        const map = L.map('map').setView([22.6500, 120.2880], 13);
+
+        // 3. 載入 OpenStreetMap 圖層
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // 4. 建立標記點 (Marker) 並綁定 Popup 彈窗
+        ubikeData.forEach(station => {
+            const popupContent = `
+                <div class="popup-card">
+                    <h3>${station.name}</h3>
+                    <p><strong>地點：</strong>${station.location}</p>
+                    <span class="capacity">總車柱數：${station.capacity} 車</span>
+                </div>
+            `;
+
+            L.marker([station.lat, station.lng])
+                .addTo(map)
+                .bindPopup(popupContent);
+        });
+    </script>
+</body>
+</html>
